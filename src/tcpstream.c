@@ -87,7 +87,7 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 	int efd, n_fds = 0;
 	int j = 0;
 	int conn_inprogress = 0;
-	struct epoll_event event, *event;
+	struct epoll_event event, *events;
 	/* the variables below are used to retrieve RTT and calculate average RTT */
 	unsigned int total_rtt = 0;
 	uint num_average_rtt = 0;
