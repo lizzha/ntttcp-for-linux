@@ -85,8 +85,7 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 
 	struct timeval timeout = {SOCKET_TIMEOUT_SEC, 0}; //set socket timeout
 	int efd, n_fds = 0;
-	int j, k = 0;
-	int conn_inprogress = 0;
+	int j = 0;
 	struct epoll_event event, *events;
 	/* the variables below are used to retrieve RTT and calculate average RTT */
 	unsigned int total_rtt = 0;
