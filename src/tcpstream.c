@@ -85,7 +85,7 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 
 	struct timeval timeout = {SOCKET_TIMEOUT_SEC, 0}; //set socket timeout
 	int efd, n_fds = 0;
-	int j = 0;
+	int j, k = 0;
 	int conn_inprogress = 0;
 	struct epoll_event event, *events;
 	/* the variables below are used to retrieve RTT and calculate average RTT */
@@ -129,15 +129,28 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 	for (i = 0; i < sc->num_connections; i++) {
 		if (conn_inprogress > 0 && i == sc->num_connections - conn_inprogress - 1) {
 			n_fds = epoll_wait (efd, events, MAX_EPOLL_EVENTS, SOCKET_TIMEOUT_SEC * 1000);
+			ASPRINTF(&log, "%d events comes, while %d connections in progress", n_fds, conn_inprogress);
+			PRINT_INFO(log);
+			k = 0;
 			for (j = 0; j < n_fds; j++) {
-				sockfds[i + j] = events[j].data.fd;
+				if ((events[j].events & EPOLLERR) ||
+				(events[j].events & EPOLLHUP) ||
+				(!(events[j].events & EPOLLOUT))) {
+					/* An error has occurred on this fd, or the socket is not ready for writing */
+					PRINT_ERR("error happened on the associated connection");
+					close (events[j].data.fd);
+				}
+				else {
+					sockfds[i + k] = events[j].data.fd;
+					k++;
+				}
 			}
-			if (n_fds == conn_inprogress) {
+			if (k == conn_inprogress) {
 				free(events);
 				close(efd);
 				break;
 			}
-			i += n_fds;
+			i += k;
 			conn_inprogress = 0;
 		}
 
