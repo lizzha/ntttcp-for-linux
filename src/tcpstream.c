@@ -127,32 +127,6 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 	events = calloc (MAX_EPOLL_EVENTS, sizeof event);
 
 	for (i = 0; i < sc->num_connections; i++) {
-		if (conn_inprogress > 0 && i == sc->num_connections - conn_inprogress - 1) {
-			n_fds = epoll_wait (efd, events, MAX_EPOLL_EVENTS, SOCKET_TIMEOUT_SEC * 1000);
-			ASPRINTF(&log, "%d events comes, while %d connections in progress", n_fds, conn_inprogress);
-			PRINT_INFO(log);
-			k = 0;
-			for (j = 0; j < n_fds; j++) {
-				if ((events[j].events & EPOLLERR) ||
-				(events[j].events & EPOLLHUP) ||
-				(!(events[j].events & EPOLLOUT))) {
-					/* An error has occurred on this fd, or the socket is not ready for writing */
-					PRINT_ERR("error happened on the associated connection");
-					close (events[j].data.fd);
-				}
-				else {
-					sockfds[i + k] = events[j].data.fd;
-					k++;
-				}
-			}
-			if (k == conn_inprogress) {
-				free(events);
-				close(efd);
-				break;
-			}
-			i += k;
-			conn_inprogress = 0;
-		}
 
 	/* only get the first entry if connected */
 	for (p = remote_serv_info; p != NULL; p = p->ai_next) {
@@ -216,13 +190,36 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 			if (errno == EINPROGRESS) {
 				event.events = EPOLLOUT;
 				event.data.fd = sockfd;
-				i--;
 				if (epoll_ctl(efd, EPOLL_CTL_ADD, sockfd, &event) != 0) {
-					PRINT_ERR("epoll_ctl failed");
+					PRINT_ERR("epoll_ctl add failed");
 					close(sockfd);
+					i--;
+					break;
 				}
-				conn_inprogress++;
-				break;
+				n_fds = epoll_wait(efd, events, MAX_EPOLL_EVENTS, SOCKET_TIMEOUT_SEC * 1000);
+				ASPRINTF(&log, "%d events comes", n_fds);
+				PRINT_INFO(log);
+				bool succeed = false;
+				for (j = 0; j < n_fds; j++) {
+					if (events[j].data.fd == sockfd) {
+						if ((events[j].events & EPOLLERR) || (events[j].events & EPOLLHUP) || (!(events[j].events & EPOLLOUT))) {
+							/* An error has occurred on this fd, or the socket is not ready for writing */
+							PRINT_ERR("error happened on the associated connection");
+						} else {
+							succeed = true;
+						}
+						break;
+					}
+				}
+				if (epoll_ctl(efd, EPOLL_CTL_DEL, sockfd, &event) != 0) {
+					PRINT_ERR("epoll_ctl del failed");
+				}
+				if (!succeed) {
+					PRINT_INFO("Retry to create connection");
+					i--;
+					close(sockfd);
+					break;
+				}
 			}
 			else {
 				ASPRINTF(&log,
@@ -265,6 +262,8 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 	}
 
 	/* so far, we have all sub connections created and connected to remote port */
+	free(events);
+	close(efd);
 	free(remote_addr_str);
 	freeaddrinfo(remote_serv_info);
 
