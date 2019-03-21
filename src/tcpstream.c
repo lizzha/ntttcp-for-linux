@@ -84,6 +84,10 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 	struct addrinfo hints, *remote_serv_info, *p; //to get remote peer's sockaddr
 
 	struct timeval timeout = {SOCKET_TIMEOUT_SEC, 0}; //set socket timeout
+	int efd, n_fds = 0;
+	int j = 0;
+	int conn_inprogress = 0;
+	struct epoll_event event, *event;
 	/* the variables below are used to retrieve RTT and calculate average RTT */
 	unsigned int total_rtt = 0;
 	uint num_average_rtt = 0;
@@ -112,7 +116,30 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 		return 0;
 	}
 
+	efd = epoll_create1 (0);
+	if (efd == -1) {
+		PRINT_ERR("epoll_create1 failed");
+		freeaddrinfo(remote_serv_info);
+		return 0;
+	}
+
+	/* Buffer where events are returned */
+	events = calloc (MAX_EPOLL_EVENTS, sizeof event);
+
 	for (i = 0; i < sc->num_connections; i++) {
+		if (conn_inprogress > 0 && i == sc->num_connections - conn_inprogress - 1) {
+			n_fds = epoll_wait (efd, events, MAX_EPOLL_EVENTS, SOCKET_TIMEOUT_SEC * 1000);
+			for (j = 0; j < n_fds; j++) {
+				sockfds[i + j] = events[j].data.fd;
+			}
+			if (n_fds == conn_inprogress) {
+				free(events);
+				close(efd);
+				break;
+			}
+			i += n_fds;
+			conn_inprogress = 0;
+		}
 
 	/* only get the first entry if connected */
 	for (p = remote_serv_info; p != NULL; p = p->ai_next) {
@@ -173,17 +200,30 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 							  remote_addr_str,
 							  ip_addr_max_size);
 		if (( ret = connect(sockfd, p->ai_addr, p->ai_addrlen)) < 0) {
-			ASPRINTF(&log,
-				"failed to connect to receiver: %s:%d on socket[%d]. return = %d, errno = %d",
-				remote_addr_str,
-				sc->server_port,
-				sockfd,
-				ret,
-				errno);
-			PRINT_INFO_FREE(log);
-			close(sockfd);
-			sockfds[i] = -1;
-			continue;
+			if (errno == EINPROGRESS) {
+				event.events = EPOLLOUT;
+				event.data.fd = sockfd;
+				i--;
+				if (epoll_ctl(efd, EPOLL_CTL_ADD, sockfd, &event) != 0) {
+					PRINT_ERR("epoll_ctl failed");
+					close(sockfd);
+					break;
+				}
+				conn_inprogress++;
+			}
+			else {
+				ASPRINTF(&log,
+					"failed to connect to receiver: %s:%d on socket[%d]. return = %d, errno = %d",
+					remote_addr_str,
+					sc->server_port,
+					sockfd,
+					ret,
+					errno);
+				PRINT_INFO_FREE(log);
+				close(sockfd);
+				sockfds[i] = -1;
+				continue;
+			}
 		}
 
 		/* get the local TCP ephemeral port number assigned to this socket, for logging purpose */
