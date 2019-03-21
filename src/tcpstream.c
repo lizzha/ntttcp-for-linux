@@ -207,9 +207,9 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 				if (epoll_ctl(efd, EPOLL_CTL_ADD, sockfd, &event) != 0) {
 					PRINT_ERR("epoll_ctl failed");
 					close(sockfd);
-					break;
 				}
 				conn_inprogress++;
+				break;
 			}
 			else {
 				ASPRINTF(&log,
