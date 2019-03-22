@@ -82,8 +82,8 @@ int run_ntttcp_sender(struct ntttcp_test_endpoint *tep)
 	pthread_attr_init(&pth_attrs);
 	pthread_attr_setstacksize(&pth_attrs, THREAD_STACK_SIZE);
 	/* create test threads */
-	for (t = 0; t < test->server_ports; t++) {
-		for (n = 0; n < test->threads_per_server_port; n++ ) {
+	for (n = 0; n < test->threads_per_server_port; n++ ) {
+		for (t = 0; t < test->server_ports; t++) {
 			cs = tep->client_streams[t * test->threads_per_server_port + n];
 			/* in client side, multiple connections will (one thread for one connection)
 			 * connect to same port on server
