@@ -195,17 +195,18 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 					i--;
 					break;
 				}
-				n_fds = epoll_wait(efd, events, MAX_EPOLL_EVENTS, SOCKET_TIMEOUT_SEC * 1000);
-				ASPRINTF(&log, "%d events comes", n_fds);
-				PRINT_INFO(log);
+				n_fds = epoll_wait(efd, events, MAX_EPOLL_EVENTS, 10 * 1000);
 				bool succeed = false;
 				for (j = 0; j < n_fds; j++) {
+					ASPRINTF(&log, "events comes for socket %d", events[j].data.fd);
+					PRINT_INFO(log);
 					if (events[j].data.fd == sockfd) {
 						if ((events[j].events & EPOLLERR) || (events[j].events & EPOLLHUP) || (!(events[j].events & EPOLLOUT))) {
 							/* An error has occurred on this fd, or the socket is not ready for writing */
 							PRINT_ERR("error happened on the associated connection");
 						} else {
 							succeed = true;
+							PRINT_INFO("Connection succeeds")
 						}
 						break;
 					}
