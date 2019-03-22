@@ -40,7 +40,7 @@ int n_write(int fd, const char *buffer, size_t total)
 	register size_t left = total;
 
 	while (left > 0) {
-		usleep(10000);
+		usleep(100000);
 		rtn = write(fd, buffer, left);
 		rtn = 0;
 		if (rtn < 0) {
