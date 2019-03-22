@@ -195,7 +195,7 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 					i--;
 					break;
 				}
-				n_fds = epoll_wait(efd, events, MAX_EPOLL_EVENTS, 10 * 1000);
+				n_fds = epoll_wait(efd, events, MAX_EPOLL_EVENTS, 15 * 1000);
 				bool succeed = false;
 				for (j = 0; j < n_fds; j++) {
 					ASPRINTF(&log, "events comes for socket %d", events[j].data.fd);
