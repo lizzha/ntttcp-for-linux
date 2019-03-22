@@ -41,7 +41,6 @@ int n_write(int fd, const char *buffer, size_t total)
 
 	while (left > 0) {
 		rtn = write(fd, buffer, left);
-		rtn = 0;
 		if (rtn < 0) {
 			if (errno == EINTR || errno == EAGAIN) {
 				return total - left;
