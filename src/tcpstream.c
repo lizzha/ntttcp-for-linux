@@ -40,8 +40,7 @@ int n_write(int fd, const char *buffer, size_t total)
 	register size_t left = total;
 
 	while (left > 0) {
-//		usleep(1000000);
-//		rtn = write(fd, buffer, left);
+		rtn = write(fd, buffer, left);
 		rtn = 0;
 		if (rtn < 0) {
 			if (errno == EINTR || errno == EAGAIN) {
@@ -231,7 +230,7 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 	}
 	//fill_buffer(buffer, sc->send_buf_size);
 	memset(buffer, 'A', buffer_len);
-
+	usleep(1000000);
 	while ( is_light_turned_on(sc->continuous_mode) ) {
 
 		for (i = 0; i < sc->num_connections; i++) {
