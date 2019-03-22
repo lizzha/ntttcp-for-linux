@@ -13,6 +13,7 @@
 #include <arpa/inet.h>
 #include "util.h"
 #include "multithreading.h"
+#include "throughputmanagement.h"
 
 int n_read(int fd, char *buffer, size_t total);
 int n_write(int fd, const char *buffer, size_t total);
