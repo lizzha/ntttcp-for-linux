@@ -116,6 +116,7 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 
 	/* only get the first entry if connected */
 	for (p = remote_serv_info; p != NULL; p = p->ai_next) {
+		usleep(1000);
 		/* 1. create socket fd */
 		if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) < 0) {
 			PRINT_ERR("cannot create a socket ednpoint");
