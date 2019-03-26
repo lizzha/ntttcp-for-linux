@@ -184,6 +184,7 @@ void *run_ntttcp_sender_tcp_stream( void *ptr )
 					errno);
 				PRINT_DBG_FREE(log);
 				close(sockfd);
+				usleep(1000000);
 				i--;
 				break;
 			}
